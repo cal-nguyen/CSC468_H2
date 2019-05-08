@@ -5832,6 +5832,18 @@ public class Parser {
         }
         // tables or linked tables
         boolean memory = false, cached = false;
+        
+        //************************************************************
+        //New Code
+        if (readIf("MATERIALIZE")) {
+        	if(readIf("VIEW")) {
+        		//Temp, global temp, persistIndexes
+				//Call with same params of CREATE TABLE
+        		parseCreateMaterializeView(false, false, cached);
+        	}
+        }
+        //*************************************************************
+        
         if (readIf("MEMORY")) {
             memory = true;
         } else if (readIf("CACHED")) {
@@ -7853,6 +7865,39 @@ public class Parser {
         }
         return command;
     }
+    
+    //*************************************************************************
+    //New Code
+    //Parameters will be false, false, cached
+    //Parses up to CREATE MATERIALIZED VIEW view_name AS
+    private CreateTable parseCreateMaterializeView(boolean temp, boolean globalTemp,
+    		boolean persistIndexes) {
+    	String query = "";
+    	String queryTableName = "";
+        boolean ifNotExists = readIfNotExists(); //CREATE MATERIALIZE VIEW [IF NOT EXISTS]
+        String tableName = readIdentifierWithSchema();  /// Table Name . tn
+        
+        Schema schema = getSchema();
+        CreateTable command = new CreateTable(session, schema);
+        command.setPersistIndexes(persistIndexes);
+        command.setTemporary(temp);
+        command.setGlobalTemporary(globalTemp);
+        command.setIfNotExists(ifNotExists);
+        command.setTableName(tableName);
+        command.setComment(readCommentIf());
+        
+        if(readIf("AS")) {
+            //Save query before getting names of tables
+        	do {
+                //query = query.concat();
+            } while (!readIf("FROM"));
+        	//Get names of tables
+        	//queryTableName = read();
+        }
+        
+        return command;
+    }
+//    *************************************************************************
 
     private CreateTable parseCreateTable(boolean temp, boolean globalTemp,
             boolean persistIndexes) {
