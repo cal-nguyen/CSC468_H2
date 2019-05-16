@@ -84,6 +84,7 @@ public abstract class Table extends SchemaObjectBase {
      * views that depend on this table
      */
     private final CopyOnWriteArrayList<TableView> dependentViews = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<TableMaterializedView> dependentMaterializedViews = new CopyOnWriteArrayList<>();
     private ArrayList<TableSynonym> synonyms;
     /** Is foreign key constraint checking enabled for this table. */
     private boolean checkForeignKeyConstraints = true;
@@ -539,6 +540,10 @@ public abstract class Table extends SchemaObjectBase {
     public CopyOnWriteArrayList<TableView> getDependentViews() {
         return dependentViews;
     }
+    
+    public CopyOnWriteArrayList<TableMaterializedView> getMaterializedViews() {
+        return dependentMaterializedViews;
+    }
 
     @Override
     public void removeChildrenAndResources(Session session) {
@@ -546,6 +551,11 @@ public abstract class Table extends SchemaObjectBase {
             TableView view = dependentViews.get(0);
             dependentViews.remove(0);
             database.removeSchemaObject(session, view);
+        }
+        while (!dependentMaterializedViews.isEmpty()) {
+        	TableMaterializedView mView = dependentMaterializedViews.get(0);
+        	dependentMaterializedViews.remove(0);
+        	database.removeSchemaObject(session, mView);
         }
         while (synonyms != null && !synonyms.isEmpty()) {
             TableSynonym synonym = synonyms.remove(0);
@@ -859,6 +869,15 @@ public abstract class Table extends SchemaObjectBase {
     public void removeDependentView(TableView view) {
         dependentViews.remove(view);
     }
+    
+    /**
+     * Remove the given materialized view from the dependent views list.
+     *
+     * @param mView the materialized view to remove
+     */
+    public void removeDependentView(TableMaterializedView mView) {
+        dependentMaterializedViews.remove(mView);
+    }
 
     /**
      * Remove the given view from the list.
@@ -903,6 +922,15 @@ public abstract class Table extends SchemaObjectBase {
      */
     public void addDependentView(TableView view) {
         dependentViews.add(view);
+    }
+    
+    /**
+     * Add a materialized view to this table.
+     *
+     * @param mView the materialized view to add
+     */
+    public void addDependentView(TableMaterializedView mView) {
+        dependentMaterializedViews.add(mView);
     }
 
     /**
