@@ -263,6 +263,11 @@ public interface CommandInterface {
      * The type of a DROP VIEW statement.
      */
     int DROP_VIEW = 48;
+    
+    /**
+     * The type of a DROP MATERIALIZED VIEW statement.
+     */
+    int DROP_MATERIALIZED_VIEW = 148;
 
     /**
      * The type of a GRANT statement.

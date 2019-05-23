@@ -99,4 +99,18 @@ public class TestMaterializedView extends TestDb {
         
         conn.close();
     }
+    
+    // Need to complete this test case
+    private void testDropView() throws SQLException {
+    	deleteDb("view");
+    	Connection conn = getConnection("view");
+        Statement stat = conn.createStatement();
+        stat.execute("CREATE TABLE Test(a INT, b INT)");
+        stat.execute("INSERT INTO Test VALUES (1, 2)");
+        stat.execute("CREATE MATERIALIZED VIEW test_view AS SELECT a FROM Test");
+        
+        stat.execute("DROP MATERIALIZED VIEW test_view");
+        
+        conn.close();
+    }
 }

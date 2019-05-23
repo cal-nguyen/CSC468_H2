@@ -18,6 +18,7 @@ import org.h2.engine.Session;
 import org.h2.message.DbException;
 import org.h2.schema.Schema;
 import org.h2.table.Table;
+import org.h2.table.TableMaterializedView;
 import org.h2.table.TableView;
 import org.h2.util.StringUtils;
 
@@ -80,6 +81,12 @@ public class DropTable extends SchemaCommand {
                 CopyOnWriteArrayList<TableView> dependentViews = table.getDependentViews();
                 if (dependentViews != null && !dependentViews.isEmpty()) {
                     for (TableView v : dependentViews) {
+                        dependencies.add(v.getName());
+                    }
+                }
+                CopyOnWriteArrayList<TableMaterializedView> materializedViews = table.getMaterializedViews();
+                if (materializedViews != null && !materializedViews.isEmpty()) {
+                    for (TableMaterializedView v : materializedViews) {
                         dependencies.add(v.getName());
                     }
                 }

@@ -419,6 +419,7 @@ public abstract class Table extends SchemaObjectBase {
             children.addAll(sequences);
         }
         children.addAll(dependentViews);
+        children.addAll(dependentMaterializedViews);
         if (synonyms != null) {
             children.addAll(synonyms);
         }
