@@ -217,6 +217,7 @@ import org.h2.table.RangeTable;
 import org.h2.table.Table;
 import org.h2.table.TableFilter;
 import org.h2.table.TableFilter.TableFilterVisitor;
+import org.h2.tools.DeleteDbFiles;
 import org.h2.table.TableView;
 import org.h2.util.IntervalUtils;
 import org.h2.util.ParserUtil;
@@ -5834,12 +5835,14 @@ public class Parser {
         boolean memory = false, cached = false;
         
         //************************************************************
-        //New Code
         if (readIf("MATERIALIZE")) {
         	if(readIf("VIEW")) {
+                if (!cached && !memory) {
+                    cached = database.getDefaultTableType() == Table.TYPE_CACHED;
+                }
         		//Temp, global temp, persistIndexes
 				//Call with same params of CREATE TABLE
-        		parseCreateMaterializeView(false, false, cached);
+        		return parseCreateTable(false, false, cached);
         	}
         }
         //*************************************************************
@@ -7866,39 +7869,6 @@ public class Parser {
         return command;
     }
     
-    //*************************************************************************
-    //New Code
-    //Parameters will be false, false, cached
-    //Parses up to CREATE MATERIALIZED VIEW view_name AS
-    private CreateTable parseCreateMaterializeView(boolean temp, boolean globalTemp,
-    		boolean persistIndexes) {
-    	String query = "";
-    	String queryTableName = "";
-        boolean ifNotExists = readIfNotExists(); //CREATE MATERIALIZE VIEW [IF NOT EXISTS]
-        String tableName = readIdentifierWithSchema();  /// Table Name . tn
-        
-        Schema schema = getSchema();
-        CreateTable command = new CreateTable(session, schema);
-        command.setPersistIndexes(persistIndexes);
-        command.setTemporary(temp);
-        command.setGlobalTemporary(globalTemp);
-        command.setIfNotExists(ifNotExists);
-        command.setTableName(tableName);
-        command.setComment(readCommentIf());
-        
-        if(readIf("AS")) {
-            //Save query before getting names of tables
-        	do {
-                //query = query.concat();
-            } while (!readIf("FROM"));
-        	//Get names of tables
-        	//queryTableName = read();
-        }
-        
-        return command;
-    }
-//    *************************************************************************
-
     private CreateTable parseCreateTable(boolean temp, boolean globalTemp,
             boolean persistIndexes) {
         boolean ifNotExists = readIfNotExists();
