@@ -654,6 +654,10 @@ public class Parser {
     private boolean rightsChecked;
     private boolean recompileAlways;
     private boolean literalsChecked;
+    private boolean isMaterialize;
+    private String materializeSelect;
+    private String materializeFrom;
+    private String materializeWhere;
     private int orderInFrom;
 
     public Parser(Session session) {
@@ -1857,6 +1861,9 @@ public class Parser {
             table = readTableFunction("TABLE", null, database.getMainSchema());
         } else {
             String tableName = readIdentifierWithSchema(null);
+            if (isMaterialize) {
+            	materializeFrom = tableName;
+            }
             Schema schema;
             if (schemaName == null) {
                 schema = null;
@@ -2745,6 +2752,9 @@ public class Parser {
         do {
             if (readIf(ASTERISK)) {
                 expressions.add(parseWildcard(null, null));
+                if (isMaterialize) {
+                	materializeSelect = "*";
+                }
             } else {
                 Expression expr = readExpression();
                 if (readIf("AS") || currentTokenType == IDENTIFIER) {
@@ -2808,6 +2818,9 @@ public class Parser {
         }
         if (readIf(WHERE)) {
             Expression condition = readExpression();
+            if (isMaterialize) {
+            	materializeWhere = condition.getSQL(false);
+            }
             command.addCondition(condition);
         }
         // the group by is read for the outer select (or not a select)
@@ -5842,12 +5855,15 @@ public class Parser {
                 }
         		//Temp, global temp, persistIndexes
 				//Call with same params of CREATE TABLE
+                
+                isMaterialize = true;
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
+        		isMaterialize = false;
         		command1.update();
         		String mView;
-        		String attribute1, attribute2;        //selection attributes
-        		String table1, table2;
-        		String value1, value2;                //where clause values
+        		String attribute1 = materializeSelect, attribute2;        //selection attributes
+        		String table1 = materializeFrom, table2;
+        		String value1 = materializeWhere, value2;                //where clause values
         		
         		/* We need to parse so the sql statement again to grab selection attributes and where clause values.
         		 * 
@@ -5877,7 +5893,6 @@ public class Parser {
         	    /* By Thursday, we need to pass actual String variables, not hard-coded strings
         	     * 
         	     * Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', " + mView + ", " + table1 + "," +  attribute1 ...    */
-        		
         	}
         }
         //*************************************************************
