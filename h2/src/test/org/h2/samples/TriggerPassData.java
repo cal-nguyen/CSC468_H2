@@ -1,5 +1,4 @@
-/*
- * Copyright 2004-2019 H2 Group. Multiple-Licensed under the MPL 2.0,
+/* Copyright 2004-2019 H2 Group. Multiple-Licensed under the MPL 2.0,
  * and the EPL 1.0 (https://h2database.com/html/license.html).
  * Initial Developer: H2 Group
  */
@@ -7,6 +6,7 @@ package org.h2.samples;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -21,7 +21,9 @@ import org.h2.api.Trigger;
 public class TriggerPassData implements Trigger {
 
     private static final ConcurrentHashMap<String, TriggerPassData> TRIGGERS = new ConcurrentHashMap<>();
-    private String triggerData;
+    private String table1;
+    private String table2;
+    private String mview;
 
     /**
      * This method is called when executing this sample application from the
@@ -34,18 +36,36 @@ public class TriggerPassData implements Trigger {
         Connection conn = DriverManager.getConnection(
                 "jdbc:h2:mem:test", "sa", "");
         Statement stat = conn.createStatement();
-        stat.execute("CREATE TABLE TEST(ID INT)");
-        stat.execute("CREATE ALIAS TRIGGER_SET FOR \"" +
-                TriggerPassData.class.getName() +
-                ".setTriggerData\"");
-        stat.execute("CREATE TRIGGER T1 " +
-                "BEFORE INSERT ON TEST " +
-                "FOR EACH ROW CALL \"" +
-                TriggerPassData.class.getName() + "\"");
-        stat.execute("CALL TRIGGER_SET('T1', 'Hello')");
-        stat.execute("INSERT INTO TEST VALUES(1)");
-        stat.execute("CALL TRIGGER_SET('T1', 'World')");
-        stat.execute("INSERT INTO TEST VALUES(2)");
+        
+        
+        stat.execute("CREATE TABLE TABLE1(VALUE INT)");                    //base table 1
+        stat.execute("CREATE TABLE TABLE2(VALUE INT)");                    //base table 2
+        
+        stat.execute("INSERT INTO TABLE1 VALUES(2)");                      
+        stat.execute("INSERT INTO TABLE2 VALUES(4)");
+        
+        stat.execute("CREATE MATERIALIZED VIEW TEST(VALUE INT) AS SELECT * FROM TABLE2");    //all 4 commands assigned in parser
+        
+        
+        
+        
+        
+        
+        stat.execute("INSERT INTO TABLE1 VALUES(1)");                     //trigger will fire on this line
+        
+        
+        
+        ResultSet rs;                                                    
+        rs = stat.executeQuery("SELECT VALUE FROM TEST");                    
+        rs.next();
+        
+        System.out.println("The first tuple of Test has value " + rs.getInt(1));   //prints tuple that was added to TEST upon creation
+        
+        
+        rs.next();
+        
+        System.out.println("The second tuple of Test has value " + rs.getInt(1)); //prints tuple that was added by the trigger
+        
         stat.close();
         conn.close();
     }
@@ -58,8 +78,13 @@ public class TriggerPassData implements Trigger {
     }
 
     @Override
-    public void fire(Connection conn, Object[] old, Object[] row) {
-        System.out.println(triggerData + ": " + row[0]);
+    public void fire(Connection conn, Object[] old, Object[] row) throws SQLException {
+    	
+    	String s = "INSERT INTO  " + mview + " VALUES(?)";
+    	PreparedStatement prep = conn.prepareStatement(s);
+        prep.setInt(1, (int) row[0]);
+        prep.execute();
+  
     }
 
     @Override
@@ -79,9 +104,15 @@ public class TriggerPassData implements Trigger {
      * @param trigger the trigger name
      * @param data the data
      */
+    
     public static void setTriggerData(Connection conn, String trigger,
-            String data) throws SQLException {
-        TRIGGERS.get(getPrefix(conn) + trigger).triggerData = data;
+            String test, String data2, String data3) throws SQLException {
+    	/* Materialized view and base table strings are given to the trigger */
+        TRIGGERS.get(getPrefix(conn) + trigger).table1 = data2;
+        TRIGGERS.get(getPrefix(conn) + trigger).table2 = data3;
+        TRIGGERS.get(getPrefix(conn) + trigger).mview = test;
+        
+        
     }
 
     private static String getPrefix(Connection conn) throws SQLException {

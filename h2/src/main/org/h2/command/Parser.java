@@ -5834,15 +5834,50 @@ public class Parser {
         // tables or linked tables
         boolean memory = false, cached = false;
         
-        //************************************************************
-        if (readIf("MATERIALIZE")) {
+      //************************************************************
+        if (readIf("MATERIALIZED")) {
         	if(readIf("VIEW")) {
                 if (!cached && !memory) {
                     cached = database.getDefaultTableType() == Table.TYPE_CACHED;
                 }
         		//Temp, global temp, persistIndexes
 				//Call with same params of CREATE TABLE
-        		return parseCreateTable(false, false, cached);
+        		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
+        		command1.update();
+        		String mView;
+        		String attribute1, attribute2;        //selection attributes
+        		String table1, table2;
+        		String value1, value2;                //where clause values
+        		
+        		/* We need to parse so the sql statement again to grab selection attributes and where clause values.
+        		 * 
+        		 * For example: 
+        		 * 
+        		 * Create Materialized View name
+        		 * as
+        		 * select attribute1, attribute2
+        		 * from table1, table2
+        		 * where table1.value = 2
+        		 * and table2.value = 3
+        		 */
+        		
+        		
+        		
+        		Prepared command2 = session.prepare("CREATE ALIAS TRIGGER_SET FOR \"org.h2.samples.TriggerPassData.setTriggerData\"");
+        	    command2.update();
+        	    
+        	    Prepared command3 = session.prepare("CREATE TRIGGER T1 BEFORE INSERT ON TABLE1 FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
+        	    command3.update();
+        	    
+        	    /*selection attributes and where clause values will be passed to TRIGGER_SET as parameters*/
+        	    
+        	    Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', 'TEST', 'TABLE1', 'TABLE2')");
+        	    return command4;
+        	    
+        	    /* By Thursday, we need to pass actual String variables, not hard-coded strings
+        	     * 
+        	     * Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', " + mView + ", " + table1 + "," +  attribute1 ...    */
+        		
         	}
         }
         //*************************************************************
