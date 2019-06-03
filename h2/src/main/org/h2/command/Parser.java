@@ -655,8 +655,8 @@ public class Parser {
     private boolean recompileAlways;
     private boolean literalsChecked;
     private boolean isMaterialize;
-    private String materializeSelect;
-    private String materializeFrom;
+    private ArrayList<String> materializeSelect = new ArrayList<String>();
+    private ArrayList<String> materializeFrom = new ArrayList<String>();
     private String materializeWhere;
     private int orderInFrom;
 
@@ -1862,7 +1862,7 @@ public class Parser {
         } else {
             String tableName = readIdentifierWithSchema(null);
             if (isMaterialize) {
-            	materializeFrom = tableName;
+            	materializeFrom.add(tableName);
             }
             Schema schema;
             if (schemaName == null) {
@@ -2753,7 +2753,7 @@ public class Parser {
             if (readIf(ASTERISK)) {
                 expressions.add(parseWildcard(null, null));
                 if (isMaterialize) {
-                	materializeSelect = "*";
+                	materializeSelect.add("*");
                 }
             } else {
                 Expression expr = readExpression();
@@ -2763,6 +2763,7 @@ public class Parser {
                     aliasColumnName |= database.getMode().aliasColumnName;
                     expr = new Alias(expr, alias, aliasColumnName);
                 }
+                materializeSelect.add(expr.getSQL(false));
                 expressions.add(expr);
             }
         } while (readIf(COMMA));
@@ -5856,14 +5857,20 @@ public class Parser {
         		//Temp, global temp, persistIndexes
 				//Call with same params of CREATE TABLE
                 
+                materializeSelect.clear();
+                materializeFrom.clear();
+                materializeWhere = null;
+                
                 isMaterialize = true;
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
         		isMaterialize = false;
         		command1.update();
         		String mView;
-        		String attribute1 = materializeSelect, attribute2;        //selection attributes
-        		String table1 = materializeFrom, table2;
-        		String value1 = materializeWhere, value2;                //where clause values
+        		ArrayList<String> attributes = new ArrayList<String>();
+        		ArrayList<String> tables = new ArrayList<String>();
+        		String attribute1, attribute2;        //selection attributes
+        		String table1, table2;
+        		String value1, value2;                //where clause values
         		
         		/* We need to parse so the sql statement again to grab selection attributes and where clause values.
         		 * 
@@ -5876,8 +5883,13 @@ public class Parser {
         		 * where table1.value = 2
         		 * and table2.value = 3
         		 */
-        		
-        		
+        		for (int i = 0; i < Math.min(1, materializeSelect.size()); i++) {
+        			attributes.add(materializeSelect.get(i));
+        		}
+        		for (int i = 0; i < Math.min(1, materializeFrom.size()); i++) {
+        			tables.add(materializeFrom.get(i));
+        		}
+        		value1 = materializeWhere;
         		
         		Prepared command2 = session.prepare("CREATE ALIAS TRIGGER_SET FOR \"org.h2.samples.TriggerPassData.setTriggerData\"");
         	    command2.update();
