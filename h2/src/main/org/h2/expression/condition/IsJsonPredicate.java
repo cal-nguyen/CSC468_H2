@@ -23,9 +23,7 @@ import org.h2.value.ValueJson;
 import org.h2.value.ValueNull;
 
 /**
- * 
  * IS JSON predicate.
- * 
  */
 public class IsJsonPredicate extends Condition {
 

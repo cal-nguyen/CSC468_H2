@@ -6,9 +6,7 @@
 package org.h2.util.json;
 
 /**
- * 
  * JSON item type.
- *
  */
 public enum JSONItemType {
 
