@@ -657,7 +657,7 @@ public class Parser {
     private boolean isMaterialize;
     private ArrayList<String> materializeSelect = new ArrayList<String>();
     private ArrayList<String> materializeFrom = new ArrayList<String>();
-    private String materializeWhere;
+    private ArrayList<String> materializeWhere = new ArrayList<String>();
     private int orderInFrom;
 
     public Parser(Session session) {
@@ -2819,9 +2819,6 @@ public class Parser {
         }
         if (readIf(WHERE)) {
             Expression condition = readExpression();
-            if (isMaterialize) {
-            	materializeWhere = condition.getSQL(false);
-            }
             command.addCondition(condition);
         }
         // the group by is read for the outer select (or not a select)
@@ -3928,6 +3925,9 @@ public class Parser {
             }
             return new ExpressionColumn(database, schema, objectName, name, false);
         }
+        if (isMaterialize) {
+        	materializeWhere.add(objectName + "." + name);
+        }
         return new ExpressionColumn(database, null, objectName, name, false);
     }
 
@@ -4021,6 +4021,9 @@ public class Parser {
                 } else if (readIf(DOT)) {
                     r = readTermObjectDot(name);
                 } else {
+                	if (isMaterialize) {
+                		materializeWhere.add(name);
+                	}
                     r = new ExpressionColumn(database, null, null, name, false);
                 }
             } else {
@@ -4030,6 +4033,9 @@ public class Parser {
                 } else if (readIf(OPEN_PAREN)) {
                     r = readFunction(null, name);
                 } else {
+                	if (isMaterialize) {
+                		materializeWhere.add(name);
+                	}
                     r = readTermWithIdentifier(name);
                 }
             }
@@ -5859,7 +5865,7 @@ public class Parser {
                 
                 materializeSelect.clear();
                 materializeFrom.clear();
-                materializeWhere = null;
+                materializeWhere.clear();
                 
                 isMaterialize = true;
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
@@ -5868,6 +5874,7 @@ public class Parser {
         		String mView;
         		ArrayList<String> attributes = new ArrayList<String>();
         		ArrayList<String> tables = new ArrayList<String>();
+        		ArrayList<String> values = new ArrayList<String>();
         		String attribute1, attribute2;        //selection attributes
         		String table1, table2;
         		String value1, value2;                //where clause values
@@ -5883,13 +5890,26 @@ public class Parser {
         		 * where table1.value = 2
         		 * and table2.value = 3
         		 */
-        		for (int i = 0; i < Math.min(1, materializeSelect.size()); i++) {
-        			attributes.add(materializeSelect.get(i));
+        		
+        		/*
+        		 * These for loops are to store only the first and second values if available, to limit how many
+        		 * cases are handled.
+        		 */
+        		if (!materializeSelect.isEmpty()) {
+        			for (int i = 0; i < Math.min(1, materializeSelect.size()); i++) {
+        				attributes.add(materializeSelect.get(i));
+        			}
         		}
-        		for (int i = 0; i < Math.min(1, materializeFrom.size()); i++) {
-        			tables.add(materializeFrom.get(i));
+        		if (!materializeFrom.isEmpty()) {
+        			for (int i = 0; i < Math.min(1, materializeFrom.size()); i++) {
+        				tables.add(materializeFrom.get(i));
+        			}
         		}
-        		value1 = materializeWhere;
+        		if (!materializeWhere.isEmpty()) {
+        			for (int i = 0; i < Math.min(1, materializeWhere.size()); i++) {
+        				values.add(materializeWhere.get(i));
+        			}
+        		}
         		
         		Prepared command2 = session.prepare("CREATE ALIAS TRIGGER_SET FOR \"org.h2.samples.TriggerPassData.setTriggerData\"");
         	    command2.update();
