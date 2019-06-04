@@ -5872,12 +5872,9 @@ public class Parser {
         		isMaterialize = false;
         		command1.update();
         		String mView;
-        		ArrayList<String> attributes = new ArrayList<String>();
-        		ArrayList<String> tables = new ArrayList<String>();
-        		ArrayList<String> values = new ArrayList<String>();
-        		String attribute1, attribute2;        //selection attributes
-        		String table1, table2;
-        		String value1, value2;                //where clause values
+        		String attribute1 = null, attribute2 = null;        //selection attributes
+        		String table1 = null, table2 = null;
+        		String value1 = null, value2 = null;                //where clause values
         		
         		/* We need to parse so the sql statement again to grab selection attributes and where clause values.
         		 * 
@@ -5895,19 +5892,27 @@ public class Parser {
         		 * These for loops are to store only the first and second values if available, to limit how many
         		 * cases are handled.
         		 */
-        		if (!materializeSelect.isEmpty()) {
-        			for (int i = 0; i < Math.min(1, materializeSelect.size()); i++) {
-        				attributes.add(materializeSelect.get(i));
+        		if (materializeSelect.size() >= 1) {
+        			attribute1 = materializeSelect.get(0);
+        			
+        			if (materializeSelect.size() >= 2) {
+        				attribute2 = materializeSelect.get(1);
         			}
         		}
-        		if (!materializeFrom.isEmpty()) {
-        			for (int i = 0; i < Math.min(1, materializeFrom.size()); i++) {
-        				tables.add(materializeFrom.get(i));
+        		
+        		if (materializeFrom.size() >= 1) {
+        			table1 = materializeFrom.get(0);
+        			
+        			if (materializeFrom.size() >= 2) {
+        				table2 = materializeFrom.get(1);
         			}
         		}
-        		if (!materializeWhere.isEmpty()) {
-        			for (int i = 0; i < Math.min(1, materializeWhere.size()); i++) {
-        				values.add(materializeWhere.get(i));
+        		
+        		if (materializeWhere.size() >= 1) {
+        			value1 = materializeWhere.get(0);
+        			
+        			if (materializeWhere.size() >= 2) {
+        				value2 = materializeWhere.get(1);
         			}
         		}
         		
