@@ -35,7 +35,9 @@ public class TestMaterializedView extends TestDb {
         deleteDb("mview");
         testEmptyColumn();
         testSingleColumn();
+        testMultipleColumn();
         testAllColumn();
+        testWhere();
         deleteDb("mview");
     }
     
@@ -64,6 +66,24 @@ public class TestMaterializedView extends TestDb {
         conn.close();
     }
     
+    private void testMultipleColumn() throws SQLException {
+        deleteDb("mview");
+        Connection conn = getConnection("mview");
+        Statement stat = conn.createStatement();
+        stat.execute("CREATE TABLE Test(a INT, b INT, c INT, d INT)");
+        stat.execute("INSERT INTO Test VALUES (1, 2, 3, 4)");
+        stat.execute("CREATE MATERIALIZED VIEW test_view AS SELECT a, b, c, d FROM Test");
+        
+        ResultSet rs = stat.executeQuery("SELECT * FROM test_view");
+        rs.next();
+        assertEquals(1, rs.getInt(1));
+        assertEquals(2, rs.getInt(2));
+        assertEquals(3, rs.getInt(3));
+        assertEquals(4, rs.getInt(4));
+        
+        conn.close();
+    }
+    
     private void testAllColumn() throws SQLException {
         deleteDb("mview");
         Connection conn = getConnection("mview");
@@ -75,8 +95,23 @@ public class TestMaterializedView extends TestDb {
         ResultSet rs = stat.executeQuery("SELECT * FROM test_view");
         rs.next();
         assertEquals(1, rs.getInt(1));
+        assertEquals(2, rs.getInt(2));
+        
+        conn.close();
+    }
+    
+    private void testWhere() throws SQLException {
+    	deleteDb("mview");
+        Connection conn = getConnection("mview");
+        Statement stat = conn.createStatement();
+        stat.execute("CREATE TABLE Test(a INT, b INT)");
+        stat.execute("INSERT INTO Test VALUES (1, 2), (2, 4)");
+        stat.execute("CREATE MATERIALIZED VIEW test_view AS SELECT * FROM Test");
+        
+        ResultSet rs = stat.executeQuery("SELECT * FROM test_view WHERE a = 2");
         rs.next();
         assertEquals(2, rs.getInt(1));
+        assertEquals(4, rs.getInt(2));
         
         conn.close();
     }
