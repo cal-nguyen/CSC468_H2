@@ -654,7 +654,8 @@ public class Parser {
     private boolean rightsChecked;
     private boolean recompileAlways;
     private boolean literalsChecked;
-    private boolean isMaterialize;
+    private boolean isMaterialize, reachedWhere;
+    private String materializeName;
     private ArrayList<String> materializeSelect = new ArrayList<String>();
     private ArrayList<String> materializeFrom = new ArrayList<String>();
     private ArrayList<String> materializeWhere = new ArrayList<String>();
@@ -2818,6 +2819,7 @@ public class Parser {
             }
         }
         if (readIf(WHERE)) {
+        	reachedWhere = true;
             Expression condition = readExpression();
             command.addCondition(condition);
         }
@@ -4021,7 +4023,7 @@ public class Parser {
                 } else if (readIf(DOT)) {
                     r = readTermObjectDot(name);
                 } else {
-                	if (isMaterialize) {
+                	if (isMaterialize && reachedWhere) {
                 		materializeWhere.add(name);
                 	}
                     r = new ExpressionColumn(database, null, null, name, false);
@@ -4033,7 +4035,7 @@ public class Parser {
                 } else if (readIf(OPEN_PAREN)) {
                     r = readFunction(null, name);
                 } else {
-                	if (isMaterialize) {
+                	if (isMaterialize && reachedWhere) {
                 		materializeWhere.add(name);
                 	}
                     r = readTermWithIdentifier(name);
@@ -5866,12 +5868,15 @@ public class Parser {
                 materializeSelect.clear();
                 materializeFrom.clear();
                 materializeWhere.clear();
+                materializeName = null;
                 
                 isMaterialize = true;
+                reachedWhere = false;
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
         		isMaterialize = false;
+        		reachedWhere = false;
         		command1.update();
-        		String mView = "'TEST'";
+        		String mView = materializeName;
         		String attribute1 = null, attribute2 = null;        //selection attributes
         		String table1 = null, table2 = null;
         		String where1 = null, where2 = null;                //where clause values
@@ -5884,8 +5889,7 @@ public class Parser {
         		 * as
         		 * select attribute1, attribute2
         		 * from table1, table2
-        		 * where table1.value = 2
-        		 * and table2.value = 3
+        		 * where table1.value = table2.value
         		 */
         		
         		/*
@@ -5901,10 +5905,10 @@ public class Parser {
         		}
         		
         		if (materializeFrom.size() >= 1) {
-        			table1 = "'" + materializeFrom.get(0) + "'";
+        			table1 = materializeFrom.get(0);
         			
         			if (materializeFrom.size() >= 2) {
-        				table2 = "'" + materializeFrom.get(1) + "'";
+        				table2 = materializeFrom.get(1);
         			}
         		}
         		
@@ -5919,18 +5923,35 @@ public class Parser {
         		Prepared command2 = session.prepare("CREATE ALIAS TRIGGER_SET FOR \"org.h2.samples.TriggerPassData.setTriggerData\"");
         	    command2.update();
         	    
-        	    Prepared command3 = session.prepare("CREATE TRIGGER T1 AFTER INSERT ON TABLE1 FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
+        	    Prepared command3 = session.prepare("CREATE TRIGGER T1 AFTER INSERT ON " + table1 + " FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
         	    command3.update();
+        	    
+        	    table1 = "'" + table1 + "'";
+        	    
+        	    if (table2 != null) {
+	        	    Prepared command4 = session.prepare("CREATE TRIGGER T2 AFTER INSERT ON " + table2 + " FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
+	        	    command4.update();
+	        	    table2 = "'" + table2 + "'";
+        	    }
         	    
         	    /*selection attributes and where clause values will be passed to TRIGGER_SET as parameters*/
         	    
-        	    //where1 = "'TABLE1.VALUE'";
-        		//where2 = "'TABLE2.VALUE'";
         	    
-        	    Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', "+mView+", "+table1+", "+table2+", "+attribute1+", "
+        		
+        		//where2 = "'2'";
+        	    Prepared command5 = session.prepare("CALL TRIGGER_SET('T1', "+mView+", "+table1+", "+table2+", "+attribute1+", "
         	    +attribute2+", "+where1+", "+where2+")");
         	    
-        	    return command4;
+        	    if (table2 != null) {
+	        	    command5.update();
+	        	    
+	        	    Prepared command6 = session.prepare("CALL TRIGGER_SET('T2', "+mView+", "+table2+", "+table1+", "+attribute1+", "
+	                	    +attribute2+", "+where2+", "+where1+")");
+	        	    return command6;
+        	    }
+        	    else
+        	    	return command5;
+	        	    
         	    
         	    
         	    /* By Thursday, we need to pass actual String variables, not hard-coded strings
@@ -7966,6 +7987,9 @@ public class Parser {
             boolean persistIndexes) {
         boolean ifNotExists = readIfNotExists();
         String tableName = readIdentifierWithSchema();
+        if (isMaterialize) {
+        	materializeName = "'" + tableName + "'";
+        }
         if (temp && globalTemp && equalsToken("SESSION", schemaName)) {
             // support weird syntax: declare global temporary table session.xy
             // (...) not logged

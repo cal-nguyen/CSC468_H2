@@ -26,6 +26,7 @@ public class TriggerPassData implements Trigger {
     private String mview;
     private String table1;
     private String table2;
+    private String triggerType;
     
     private String attribute1;
     private String attribute2;
@@ -46,15 +47,17 @@ public class TriggerPassData implements Trigger {
         Statement stat = conn.createStatement();
         
         
-        stat.execute("CREATE TABLE TABLE1(VALUE INT, NAME VARCHAR)");                    //base table 1
-        stat.execute("CREATE TABLE TABLE2(VALUE INT, LOCATION VARCHAR)");                    //base table 2
+        stat.execute("CREATE TABLE TABLE1(ID INT, NAME VARCHAR)");                    //base table 1
+        stat.execute("CREATE TABLE TABLE2(ID INT, LOCATION VARCHAR)");                    //base table 2
         
         stat.execute("INSERT INTO TABLE1 VALUES(2, 'Thomas Bramble')");                      
         stat.execute("INSERT INTO TABLE2 VALUES(4, 'San Diego')");
         stat.execute("INSERT INTO TABLE2  VALUES(2, 'Paso Robles')");
+        stat.execute("INSERT INTO TABLE2 VALUES(2, 'San Luis Obispo')");
         
-        stat.execute("CREATE MATERIALIZED VIEW TEST(NAME VARCHAR, LOCATION VARCHAR) AS SELECT NAME, LOCATION FROM "
-        		+ "TABLE1, TABLE2 WHERE TABLE1.VALUE = TABLE2.VALUE");    //all 4 commands assigned in parser
+        
+        stat.execute("CREATE MATERIALIZED VIEW TEST(ID INT, LOCATION VARCHAR) AS SELECT ID, LOCATION FROM "
+        		+ "TABLE2 WHERE ID = '2'");    //all 4 commands assigned in parser
         
         
         
@@ -63,18 +66,19 @@ public class TriggerPassData implements Trigger {
         
         stat.execute("INSERT INTO TABLE1 VALUES(2, 'Wes Janson')");                     //trigger will fire on this line
         
-        
+        stat.execute("INSERT INTO TABLE2 VALUES(2, 'Los Angeles')");
         
         ResultSet rs;                                                    
-        rs = stat.executeQuery("SELECT * FROM TEST");                    
+        rs = stat.executeQuery("SELECT * FROM TEST");           
+        rs.next();
+        System.out.println("The first tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
+        rs.next();
+        System.out.println("The second tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
+        rs.next();
+        System.out.println("The third tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
         rs.next();
         
-        System.out.println("The first tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));   //prints tuple that was added to TEST upon creation
         
-        
-        rs.next();
-        
-        System.out.println("The second tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2)); //prints tuple that was added by the trigger
         
         stat.close();
         conn.close();
@@ -89,7 +93,15 @@ public class TriggerPassData implements Trigger {
 
     @Override
     public void fire(Connection conn, Object[] old, Object[] row) throws SQLException {
+    	if (triggerType.contentEquals("Insert"))
+    		insert(conn, old, row);
     	
+    	
+        
+        
+    }
+    
+    private void insert(Connection conn, Object[] old, Object[] row) throws SQLException {
     	String s;
     	Statement stat;
     	PreparedStatement prep;
@@ -109,16 +121,28 @@ public class TriggerPassData implements Trigger {
         if (where1 != null) {
 	        for (int j = 1; j < rsmd.getColumnCount()+1; j++) {            //loop through columns of first table
 	        	cName = rsmd.getColumnName(j);
-	        	jTemp = cName;
-	        	if (table2 != null)
-	        		cName = table1 + "." + cName;                             //join attribute will be written as table1.attribute
+	        	
+	        	                             
 	        	if (cName.contentEquals(where1)) {                        //if cName contains name of join attribute
-	        		jName = jTemp;
+	        		jName = cName;
 	        		if (rsmd.getColumnTypeName(j).contentEquals("INT"))
 	        			cValue = (String) row[j-1];                       //get int value of join attribute for the tuple inserted
 	        		else
 	        			cValue = "'" + row[j-1] + "'";                    //get string value of join attribute for the tuple inserted
 	        		System.out.println("SUCCESS!");
+	        	}
+	        	else {
+	        		jTemp = cName;
+	        	
+		        	cName = table1 + "." + cName;
+		        	if (cName.contentEquals(where1)) {                        //if cName contains name of join attribute
+		        		jName = jTemp;
+		        		if (rsmd.getColumnTypeName(j).contentEquals("INT"))
+		        			cValue = (String) row[j-1];                       //get int value of join attribute for the tuple inserted
+		        		else
+		        			cValue = "'" + row[j-1] + "'";                    //get string value of join attribute for the tuple inserted
+		        		System.out.println("SUCCESS!");
+		        	}
 	        	}
 	        }
         }
@@ -176,39 +200,35 @@ public class TriggerPassData implements Trigger {
 			}
 				
 		}
-		
-    		
-    	
-        
-        
-        
-        rs = stat.executeQuery(s);
-        rs.next();
-        rsmd = rs.getMetaData();
-        
-        /*Construct insertion statement*/
-        s = "INSERT INTO " + mview + " VALUES(";
+		 
         k++;
-        while (k < 2) {
+        int q;
+        rs = stat.executeQuery(s);
+        while (rs.next()) {
+        	rsmd = rs.getMetaData();
         	
-        	if (rsmd.getColumnTypeName(k).contentEquals("INT"))
-        		s = s + rs.getInt(k) + ", ";
-        	else
-        		s = s + "'" + rs.getString(k) + "'" + ", ";
-        	
-        	System.out.println(mview);
-        	k++;
+	        /*Construct insertion statement*/
+	        s = "INSERT INTO " + mview + " VALUES(";
+	        q = k;
+	        while (q < 2) {
+	        	
+	        	if (rsmd.getColumnTypeName(q).contentEquals("INT"))
+	        		s = s + rs.getInt(q) + ", ";
+	        	else
+	        		s = s + "'" + rs.getString(q) + "'" + ", ";
+	        	
+	        	System.out.println(mview);
+	        	q++;
+	        }
+	        
+	        if (rsmd.getColumnTypeName(q).contentEquals("INT"))
+	    		s = s + rs.getInt(q) + ")";
+	    	else
+	    		s = s + "'" + rs.getString(q) + "'" + ")";
+	        
+	        prep = conn.prepareStatement(s);
+	        prep.execute();
         }
-        
-        if (rsmd.getColumnTypeName(k).contentEquals("INT"))
-    		s = s + rs.getInt(k) + ")";
-    	else
-    		s = s + "'" + rs.getString(k) + "'" + ")";
-        
-        prep = conn.prepareStatement(s);
-        prep.execute();
-        
-        
     }
 
     @Override
@@ -241,7 +261,7 @@ public class TriggerPassData implements Trigger {
         TRIGGERS.get(getPrefix(conn) + trigger).attribute2 = attribute2;
         TRIGGERS.get(getPrefix(conn) + trigger).where1 = where1;
         TRIGGERS.get(getPrefix(conn) + trigger).where2 = where2;
-        
+        TRIGGERS.get(getPrefix(conn) + trigger).triggerType = "Insert";
         System.out.println(mview);
         System.out.println(table1);
         System.out.println(table2);
