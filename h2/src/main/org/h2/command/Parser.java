@@ -5937,7 +5937,6 @@ public class Parser {
         	    /*selection attributes and where clause values will be passed to TRIGGER_SET as parameters*/
         	    
         	    
-        		
         		//where2 = "'2'";
         	    Prepared command5 = session.prepare("CALL TRIGGER_SET('T1', "+mView+", "+table1+", "+table2+", "+attribute1+", "
         	    +attribute2+", "+where1+", "+where2+")");

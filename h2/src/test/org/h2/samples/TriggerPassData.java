@@ -47,7 +47,7 @@ public class TriggerPassData implements Trigger {
         Statement stat = conn.createStatement();
         
         
-        stat.execute("CREATE TABLE TABLE1(ID INT, NAME VARCHAR)");                    //base table 1
+        stat.execute("CREATE TABLE TABLE1(IDENTITY INT, NAME VARCHAR)");                    //base table 1
         stat.execute("CREATE TABLE TABLE2(ID INT, LOCATION VARCHAR)");                    //base table 2
         
         stat.execute("INSERT INTO TABLE1 VALUES(2, 'Thomas Bramble')");                      
@@ -59,7 +59,7 @@ public class TriggerPassData implements Trigger {
         stat.execute("CREATE MATERIALIZED VIEW TEST(ID INT, LOCATION VARCHAR) AS SELECT ID, LOCATION FROM "
         		+ "TABLE2 WHERE ID = '2'");    //all 4 commands assigned in parser
         
-        
+        //stat.execute("UPDATE TABLE2 SET LOCATION = 'Arroyo Grande' WHERE ID = 4");
         
         
         
@@ -76,7 +76,6 @@ public class TriggerPassData implements Trigger {
         System.out.println("The second tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
         rs.next();
         System.out.println("The third tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
-        rs.next();
         
         
         
@@ -115,37 +114,10 @@ public class TriggerPassData implements Trigger {
         rs.next();
         
         /*cName will iterate through columns, cValue will store join attribute value, jName will store name of join attribute */
-        String cName, cValue = null, jTemp = null, jName = null;  
+        String cName;
         ResultSetMetaData rsmd = rs.getMetaData();
         
-        if (where1 != null) {
-	        for (int j = 1; j < rsmd.getColumnCount()+1; j++) {            //loop through columns of first table
-	        	cName = rsmd.getColumnName(j);
-	        	
-	        	                             
-	        	if (cName.contentEquals(where1)) {                        //if cName contains name of join attribute
-	        		jName = cName;
-	        		if (rsmd.getColumnTypeName(j).contentEquals("INT"))
-	        			cValue = (String) row[j-1];                       //get int value of join attribute for the tuple inserted
-	        		else
-	        			cValue = "'" + row[j-1] + "'";                    //get string value of join attribute for the tuple inserted
-	        		System.out.println("SUCCESS!");
-	        	}
-	        	else {
-	        		jTemp = cName;
-	        	
-		        	cName = table1 + "." + cName;
-		        	if (cName.contentEquals(where1)) {                        //if cName contains name of join attribute
-		        		jName = jTemp;
-		        		if (rsmd.getColumnTypeName(j).contentEquals("INT"))
-		        			cValue = (String) row[j-1];                       //get int value of join attribute for the tuple inserted
-		        		else
-		        			cValue = "'" + row[j-1] + "'";                    //get string value of join attribute for the tuple inserted
-		        		System.out.println("SUCCESS!");
-		        	}
-	        	}
-	        }
-        }
+        
         
         
         
@@ -162,23 +134,26 @@ public class TriggerPassData implements Trigger {
     	}
                          //if two tables are join with where condition
 		if (table2 != null) {
-    		s = s + " FROM " + table1 + ", " + table2 + " WHERE " + where2 + " = " + cValue; //value of join attribute is used
+			if (where1 != null)
+				s = s + " FROM " + table1 + ", " + table2 + " WHERE " + where1 + " = " + where2; //value of join attribute is used
+			else
+				s = s + " FROM " + table1 + ", " + table2 + " WHERE ";
 		}
-		else if (where1 != null) {
-			s = s + " FROM " + table1 + " WHERE " + where1 + " = " + where2;
+		else  {
+			if (where1 != null)
+				s = s + " FROM " + table1 + " WHERE " + where1 + " = " + where2;
+			else {
+				s = s + " FROM " + table1 + " WHERE ";
+			}
 		}
-		else {
-			s = s + " FROM " + table1 + " WHERE ";
-		}
+		
 		
 		for (int i = 1; i <= row.length; i++) {
 			
 			cName = rsmd.getColumnName(i);
 			
 			if (where1 != null) {
-				if (cName.contentEquals(jName)) {          //if cName is join attribute, set it equal to table1.attribute
-					cName = where1;
-				}
+				
 				if (rsmd.getColumnTypeName(i).contentEquals("INT"))     //add where conditions to string
 					s = s + " AND " + cName + " = " + row[i-1];
 				else
@@ -217,7 +192,7 @@ public class TriggerPassData implements Trigger {
 	        	else
 	        		s = s + "'" + rs.getString(q) + "'" + ", ";
 	        	
-	        	System.out.println(mview);
+	        	
 	        	q++;
 	        }
 	        
@@ -231,6 +206,74 @@ public class TriggerPassData implements Trigger {
         }
     }
 
+    private void update(Connection conn, Object[] old, Object[] row) throws SQLException {
+    	String s;
+    	Statement stat;
+    	PreparedStatement prep;
+    	ResultSet rs;
+    	
+    	/* Select all of the columns from first table for metadata (we need value of join attribute for a query) */
+    	s = "SELECT * FROM " + table1;                 
+    	stat = conn.createStatement();
+        
+        rs = stat.executeQuery(s);
+        rs.next();
+        
+        s = "UPDATE " + mview + " SET ";
+        Boolean commaBit = false;
+        String cName;  
+        ResultSetMetaData rsmd = rs.getMetaData();
+        
+        
+        for (int j = 1; j < row.length+1; j++) {            //loop through columns of first table
+        	if (!row[j-1].equals(old[j-1])) {
+        	
+        		cName = rsmd.getColumnName(j);
+        		if (commaBit)
+        			s = s + ", ";
+        		if (cName.contentEquals(attribute1) || cName.contentEquals(attribute2)) {
+        			if (rsmd.getColumnTypeName(j).contentEquals("INT"))
+        				s = s + cName + " = " + row[j-1];
+        			else
+        				s = s + cName + " = " + "'" + row[j-1] + "'";
+        			commaBit = true;
+        		}
+        			
+        		
+        	}
+        }
+        
+        Boolean andBit = false;
+        s = s + " WHERE ";
+        for (int j = 1; j < row.length+1; j++) {
+        	cName = rsmd.getColumnName(j);
+ 
+    		if (andBit)
+    			s = s + " AND ";
+    		if (cName.contentEquals(attribute1) || cName.contentEquals(attribute2)) {
+    			if (rsmd.getColumnTypeName(j).contentEquals("INT"))
+    				s = s + cName + " = " + old[j-1];
+    			else
+    				s = s + cName + " = " + "'" + old[j-1] + "'";
+    			commaBit = true;
+    		}
+        }
+        
+        prep = conn.prepareStatement(s);
+        prep.execute();
+    }
+        
+        
+	        
+	        	
+	        	                             
+	        	
+        
+        
+        
+        
+        
+    
     @Override
     public void close() {
         // ignore
@@ -262,14 +305,14 @@ public class TriggerPassData implements Trigger {
         TRIGGERS.get(getPrefix(conn) + trigger).where1 = where1;
         TRIGGERS.get(getPrefix(conn) + trigger).where2 = where2;
         TRIGGERS.get(getPrefix(conn) + trigger).triggerType = "Insert";
-        System.out.println(mview);
-        System.out.println(table1);
-        System.out.println(table2);
+        System.out.println("mView: " + mview);
+        System.out.println("table1: " + table1);
+        System.out.println("table2: " + table2);
         
-        System.out.println(attribute1);
-        System.out.println(attribute2);
-        System.out.println(where1);
-        System.out.println(where2);
+        System.out.println("attribute1: " + attribute1);
+        System.out.println("attribute2: " + attribute2);
+        System.out.println("where1: " + table1);
+        System.out.println("where2: " + table2);
     }
 
     private static String getPrefix(Connection conn) throws SQLException {
