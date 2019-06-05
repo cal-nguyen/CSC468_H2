@@ -3928,7 +3928,7 @@ public class Parser {
             return new ExpressionColumn(database, schema, objectName, name, false);
         }
         if (isMaterialize) {
-        	materializeWhere.add(objectName + "." + name);
+        	materializeWhere.add("'" + objectName + "." + name + "'");
         }
         return new ExpressionColumn(database, null, objectName, name, false);
     }
@@ -4024,7 +4024,7 @@ public class Parser {
                     r = readTermObjectDot(name);
                 } else {
                 	if (isMaterialize && reachedWhere) {
-                		materializeWhere.add(name);
+                		materializeWhere.add("'" + name + "'");
                 	}
                     r = new ExpressionColumn(database, null, null, name, false);
                 }
@@ -4036,7 +4036,7 @@ public class Parser {
                     r = readFunction(null, name);
                 } else {
                 	if (isMaterialize && reachedWhere) {
-                		materializeWhere.add(name);
+                		materializeWhere.add("'" + name + "'");
                 	}
                     r = readTermWithIdentifier(name);
                 }
@@ -4147,6 +4147,9 @@ public class Parser {
             break;
         case VALUE:
             r = ValueExpression.get(currentValue);
+            if (isMaterialize) {
+        		materializeWhere.add(currentValue.getSQL());
+        	}
             read();
             break;
         case VALUES:
@@ -5913,10 +5916,10 @@ public class Parser {
         		}
         		
         		if (materializeWhere.size() >= 1) {
-        			where1 = "'" + materializeWhere.get(0) + "'";
+        			where1 = materializeWhere.get(0);
         			
         			if (materializeWhere.size() >= 2) {
-        				where2 = "'" + materializeWhere.get(1) + "'";
+        				where2 = materializeWhere.get(1);
         			}
         		}
         		

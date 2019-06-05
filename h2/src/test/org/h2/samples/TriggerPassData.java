@@ -311,8 +311,8 @@ public class TriggerPassData implements Trigger {
         
         System.out.println("attribute1: " + attribute1);
         System.out.println("attribute2: " + attribute2);
-        System.out.println("where1: " + table1);
-        System.out.println("where2: " + table2);
+        System.out.println("where1: " + where1);
+        System.out.println("where2: " + where2);
     }
 
     private static String getPrefix(Connection conn) throws SQLException {
