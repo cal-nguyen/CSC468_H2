@@ -654,6 +654,10 @@ public class Parser {
     private boolean rightsChecked;
     private boolean recompileAlways;
     private boolean literalsChecked;
+    private boolean isMaterialize;
+    private ArrayList<String> materializeSelect = new ArrayList<String>();
+    private ArrayList<String> materializeFrom = new ArrayList<String>();
+    private ArrayList<String> materializeWhere = new ArrayList<String>();
     private int orderInFrom;
 
     public Parser(Session session) {
@@ -1857,6 +1861,9 @@ public class Parser {
             table = readTableFunction("TABLE", null, database.getMainSchema());
         } else {
             String tableName = readIdentifierWithSchema(null);
+            if (isMaterialize) {
+            	materializeFrom.add(tableName);
+            }
             Schema schema;
             if (schemaName == null) {
                 schema = null;
@@ -2745,6 +2752,9 @@ public class Parser {
         do {
             if (readIf(ASTERISK)) {
                 expressions.add(parseWildcard(null, null));
+                if (isMaterialize) {
+                	materializeSelect.add("*");
+                }
             } else {
                 Expression expr = readExpression();
                 if (readIf("AS") || currentTokenType == IDENTIFIER) {
@@ -2753,6 +2763,7 @@ public class Parser {
                     aliasColumnName |= database.getMode().aliasColumnName;
                     expr = new Alias(expr, alias, aliasColumnName);
                 }
+                materializeSelect.add(expr.getSQL(false));
                 expressions.add(expr);
             }
         } while (readIf(COMMA));
@@ -3914,6 +3925,9 @@ public class Parser {
             }
             return new ExpressionColumn(database, schema, objectName, name, false);
         }
+        if (isMaterialize) {
+        	materializeWhere.add(objectName + "." + name);
+        }
         return new ExpressionColumn(database, null, objectName, name, false);
     }
 
@@ -4007,6 +4021,9 @@ public class Parser {
                 } else if (readIf(DOT)) {
                     r = readTermObjectDot(name);
                 } else {
+                	if (isMaterialize) {
+                		materializeWhere.add(name);
+                	}
                     r = new ExpressionColumn(database, null, null, name, false);
                 }
             } else {
@@ -4016,6 +4033,9 @@ public class Parser {
                 } else if (readIf(OPEN_PAREN)) {
                     r = readFunction(null, name);
                 } else {
+                	if (isMaterialize) {
+                		materializeWhere.add(name);
+                	}
                     r = readTermWithIdentifier(name);
                 }
             }
@@ -5834,7 +5854,85 @@ public class Parser {
         // tables or linked tables
         boolean memory = false, cached = false;
         
-      
+      //************************************************************
+        if (readIf("MATERIALIZED")) {
+        	if(readIf("VIEW")) {
+                if (!cached && !memory) {
+                    cached = database.getDefaultTableType() == Table.TYPE_CACHED;
+                }
+        		//Temp, global temp, persistIndexes
+				//Call with same params of CREATE TABLE
+                
+                materializeSelect.clear();
+                materializeFrom.clear();
+                materializeWhere.clear();
+                
+                isMaterialize = true;
+        		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
+        		isMaterialize = false;
+        		command1.update();
+        		String mView;
+        		String attribute1 = null, attribute2 = null;        //selection attributes
+        		String table1 = null, table2 = null;
+        		String value1 = null, value2 = null;                //where clause values
+        		
+        		/* We need to parse so the sql statement again to grab selection attributes and where clause values.
+        		 * 
+        		 * For example: 
+        		 * 
+        		 * Create Materialized View name
+        		 * as
+        		 * select attribute1, attribute2
+        		 * from table1, table2
+        		 * where table1.value = 2
+        		 * and table2.value = 3
+        		 */
+        		
+        		/*
+        		 * These for loops are to store only the first and second values if available, to limit how many
+        		 * cases are handled.
+        		 */
+        		if (materializeSelect.size() >= 1) {
+        			attribute1 = materializeSelect.get(0);
+        			
+        			if (materializeSelect.size() >= 2) {
+        				attribute2 = materializeSelect.get(1);
+        			}
+        		}
+        		
+        		if (materializeFrom.size() >= 1) {
+        			table1 = materializeFrom.get(0);
+        			
+        			if (materializeFrom.size() >= 2) {
+        				table2 = materializeFrom.get(1);
+        			}
+        		}
+        		
+        		if (materializeWhere.size() >= 1) {
+        			value1 = materializeWhere.get(0);
+        			
+        			if (materializeWhere.size() >= 2) {
+        				value2 = materializeWhere.get(1);
+        			}
+        		}
+        		
+        		Prepared command2 = session.prepare("CREATE ALIAS TRIGGER_SET FOR \"org.h2.samples.TriggerPassData.setTriggerData\"");
+        	    command2.update();
+        	    
+        	    Prepared command3 = session.prepare("CREATE TRIGGER T1 BEFORE INSERT ON TABLE1 FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
+        	    command3.update();
+        	    
+        	    /*selection attributes and where clause values will be passed to TRIGGER_SET as parameters*/
+        	    
+        	    Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', 'TEST', 'TABLE1', 'TABLE2')");
+        	    return command4;
+        	    
+        	    /* By Thursday, we need to pass actual String variables, not hard-coded strings
+        	     * 
+        	     * Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', " + mView + ", " + table1 + "," +  attribute1 ...    */
+        	}
+        }
+        //*************************************************************
         
         if (readIf("MEMORY")) {
             memory = true;

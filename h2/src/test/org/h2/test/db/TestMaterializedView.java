@@ -32,27 +32,26 @@ public class TestMaterializedView extends TestDb {
 
     @Override
     public void test() throws SQLException {
-        deleteDb("view");
+        deleteDb("mview");
         testEmptyColumn();
         testSingleColumn();
-        testInnerJoin();
-        testView();
-        deleteDb("view");
+        testAllColumn();
+        deleteDb("mview");
     }
     
     private void testEmptyColumn() throws SQLException {
-        deleteDb("view");
-        Connection conn = getConnection("view");
+        deleteDb("mview");
+        Connection conn = getConnection("mview");
         Statement stat = conn.createStatement();
         stat.execute("CREATE TABLE Test(a INT, b INT)");
         stat.execute("CREATE MATERIALIZED VIEW test_view AS SELECT a, b FROM Test");
-        stat.execute("SELECT * FROM test_view WHERE a between 1 and 2 and b = 2");
+        stat.execute("SELECT * FROM test_view");
         conn.close();
     }
     
     private void testSingleColumn() throws SQLException {
-        deleteDb("view");
-        Connection conn = getConnection("view");
+        deleteDb("mview");
+        Connection conn = getConnection("mview");
         Statement stat = conn.createStatement();
         stat.execute("CREATE TABLE Test(a INT, b INT)");
         stat.execute("INSERT INTO Test VALUES (1, 2)");
@@ -65,9 +64,27 @@ public class TestMaterializedView extends TestDb {
         conn.close();
     }
     
+    private void testAllColumn() throws SQLException {
+        deleteDb("mview");
+        Connection conn = getConnection("mview");
+        Statement stat = conn.createStatement();
+        stat.execute("CREATE TABLE Test(a INT, b INT)");
+        stat.execute("INSERT INTO Test VALUES (1, 2)");
+        stat.execute("CREATE MATERIALIZED VIEW test_view AS SELECT * FROM Test");
+        
+        ResultSet rs = stat.executeQuery("SELECT * FROM test_view");
+        rs.next();
+        assertEquals(1, rs.getInt(1));
+        rs.next();
+        assertEquals(2, rs.getInt(1));
+        
+        conn.close();
+    }
+    
+    /*
     private void testInnerJoin() throws SQLException {
-        deleteDb("view");
-        Connection conn = getConnection("view");
+        deleteDb("mview");
+        Connection conn = getConnection("mview");
         Statement stat = conn.createStatement();
         stat.execute("CREATE TABLE First(id INT PRIMARY KEY, name VARCHAR(25))");
         stat.execute("INSERT INTO First VALUES ('Bob'), ('Carly')");
@@ -85,8 +102,8 @@ public class TestMaterializedView extends TestDb {
     }
     
     private void testView() throws SQLException {
-        deleteDb("view");
-        Connection conn = getConnection("view");
+        deleteDb("mview");
+        Connection conn = getConnection("mview");
         Statement stat = conn.createStatement();
         stat.execute("CREATE TABLE Test(a INT, b INT)");
         stat.execute("INSERT INTO Test VALUES (1, 2)");
@@ -99,4 +116,5 @@ public class TestMaterializedView extends TestDb {
         
         conn.close();
     }
+    */
 }
