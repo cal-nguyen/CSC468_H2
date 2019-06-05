@@ -655,6 +655,7 @@ public class Parser {
     private boolean recompileAlways;
     private boolean literalsChecked;
     private boolean isMaterialize, reachedWhere;
+    private String materializeName;
     private ArrayList<String> materializeSelect = new ArrayList<String>();
     private ArrayList<String> materializeFrom = new ArrayList<String>();
     private ArrayList<String> materializeWhere = new ArrayList<String>();
@@ -5867,6 +5868,7 @@ public class Parser {
                 materializeSelect.clear();
                 materializeFrom.clear();
                 materializeWhere.clear();
+                materializeName = null;
                 
                 isMaterialize = true;
                 reachedWhere = false;
@@ -5874,7 +5876,7 @@ public class Parser {
         		isMaterialize = false;
         		reachedWhere = false;
         		command1.update();
-        		String mView = "'TEST'";
+        		String mView = materializeName;
         		String attribute1 = null, attribute2 = null;        //selection attributes
         		String table1 = null, table2 = null;
         		String where1 = null, where2 = null;                //where clause values
@@ -7969,6 +7971,9 @@ public class Parser {
             boolean persistIndexes) {
         boolean ifNotExists = readIfNotExists();
         String tableName = readIdentifierWithSchema();
+        if (isMaterialize) {
+        	materializeName = "'" + tableName + "'";
+        }
         if (temp && globalTemp && equalsToken("SESSION", schemaName)) {
             // support weird syntax: declare global temporary table session.xy
             // (...) not logged
