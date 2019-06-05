@@ -5871,10 +5871,10 @@ public class Parser {
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
         		isMaterialize = false;
         		command1.update();
-        		String mView;
+        		String mView = "'TEST'";
         		String attribute1 = null, attribute2 = null;        //selection attributes
         		String table1 = null, table2 = null;
-        		String value1 = null, value2 = null;                //where clause values
+        		String where1 = null, where2 = null;                //where clause values
         		
         		/* We need to parse so the sql statement again to grab selection attributes and where clause values.
         		 * 
@@ -5893,39 +5893,45 @@ public class Parser {
         		 * cases are handled.
         		 */
         		if (materializeSelect.size() >= 1) {
-        			attribute1 = materializeSelect.get(0);
+        			attribute1 = "'" + materializeSelect.get(0) + "'";
         			
         			if (materializeSelect.size() >= 2) {
-        				attribute2 = materializeSelect.get(1);
+        				attribute2 = "'" + materializeSelect.get(1) + "'";
         			}
         		}
         		
         		if (materializeFrom.size() >= 1) {
-        			table1 = materializeFrom.get(0);
+        			table1 = "'" + materializeFrom.get(0) + "'";
         			
         			if (materializeFrom.size() >= 2) {
-        				table2 = materializeFrom.get(1);
+        				table2 = "'" + materializeFrom.get(1) + "'";
         			}
         		}
         		
         		if (materializeWhere.size() >= 1) {
-        			value1 = materializeWhere.get(0);
+        			where1 = "'" + materializeWhere.get(0) + "'";
         			
         			if (materializeWhere.size() >= 2) {
-        				value2 = materializeWhere.get(1);
+        				where2 = "'" + materializeWhere.get(1) + "'";
         			}
         		}
         		
         		Prepared command2 = session.prepare("CREATE ALIAS TRIGGER_SET FOR \"org.h2.samples.TriggerPassData.setTriggerData\"");
         	    command2.update();
         	    
-        	    Prepared command3 = session.prepare("CREATE TRIGGER T1 BEFORE INSERT ON TABLE1 FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
+        	    Prepared command3 = session.prepare("CREATE TRIGGER T1 AFTER INSERT ON TABLE1 FOR EACH ROW CALL \"org.h2.samples.TriggerPassData\"");
         	    command3.update();
         	    
         	    /*selection attributes and where clause values will be passed to TRIGGER_SET as parameters*/
         	    
-        	    Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', 'TEST', 'TABLE1', 'TABLE2')");
+        	    //where1 = "'TABLE1.VALUE'";
+        		//where2 = "'TABLE2.VALUE'";
+        	    
+        	    Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', "+mView+", "+table1+", "+table2+", "+attribute1+", "
+        	    +attribute2+", "+where1+", "+where2+")");
+        	    
         	    return command4;
+        	    
         	    
         	    /* By Thursday, we need to pass actual String variables, not hard-coded strings
         	     * 

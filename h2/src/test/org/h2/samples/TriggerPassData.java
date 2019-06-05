@@ -124,6 +124,7 @@ public class TriggerPassData implements Trigger {
         }
         
         
+        
         int k = 0;           //keeps track of whether 1 or 2 attributes is selected
         
         /*Set up sql statement that will select tuples containing all values of tuple inserted into base table */
@@ -240,6 +241,15 @@ public class TriggerPassData implements Trigger {
         TRIGGERS.get(getPrefix(conn) + trigger).attribute2 = attribute2;
         TRIGGERS.get(getPrefix(conn) + trigger).where1 = where1;
         TRIGGERS.get(getPrefix(conn) + trigger).where2 = where2;
+        
+        System.out.println(mview);
+        System.out.println(table1);
+        System.out.println(table2);
+        
+        System.out.println(attribute1);
+        System.out.println(attribute2);
+        System.out.println(where1);
+        System.out.println(where2);
     }
 
     private static String getPrefix(Connection conn) throws SQLException {
