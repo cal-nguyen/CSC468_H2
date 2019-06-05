@@ -654,7 +654,7 @@ public class Parser {
     private boolean rightsChecked;
     private boolean recompileAlways;
     private boolean literalsChecked;
-    private boolean isMaterialize;
+    private boolean isMaterialize, reachedWhere;
     private ArrayList<String> materializeSelect = new ArrayList<String>();
     private ArrayList<String> materializeFrom = new ArrayList<String>();
     private ArrayList<String> materializeWhere = new ArrayList<String>();
@@ -2818,6 +2818,7 @@ public class Parser {
             }
         }
         if (readIf(WHERE)) {
+        	reachedWhere = true;
             Expression condition = readExpression();
             command.addCondition(condition);
         }
@@ -4021,7 +4022,7 @@ public class Parser {
                 } else if (readIf(DOT)) {
                     r = readTermObjectDot(name);
                 } else {
-                	if (isMaterialize) {
+                	if (isMaterialize && reachedWhere) {
                 		materializeWhere.add(name);
                 	}
                     r = new ExpressionColumn(database, null, null, name, false);
@@ -4033,7 +4034,7 @@ public class Parser {
                 } else if (readIf(OPEN_PAREN)) {
                     r = readFunction(null, name);
                 } else {
-                	if (isMaterialize) {
+                	if (isMaterialize && reachedWhere) {
                 		materializeWhere.add(name);
                 	}
                     r = readTermWithIdentifier(name);
@@ -5868,8 +5869,10 @@ public class Parser {
                 materializeWhere.clear();
                 
                 isMaterialize = true;
+                reachedWhere = false;
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
         		isMaterialize = false;
+        		reachedWhere = false;
         		command1.update();
         		String mView = "'TEST'";
         		String attribute1 = null, attribute2 = null;        //selection attributes
