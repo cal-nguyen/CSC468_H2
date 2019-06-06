@@ -67,8 +67,7 @@ public class MVHelloWorld {
             System.out.println("\t\t" + rs.getString("name"));
         }
         
-
-        
+             
         stat.close();
         conn.close();
     }
