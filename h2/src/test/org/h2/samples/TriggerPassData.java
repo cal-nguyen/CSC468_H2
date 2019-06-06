@@ -50,36 +50,46 @@ public class TriggerPassData implements Trigger {
         Statement stat = conn.createStatement();
         
         
-        stat.execute("CREATE TABLE TABLE1(IDENTITY INT, NAME VARCHAR)");                    //base table 1
+        stat.execute("CREATE TABLE TABLE1(IDENTITY INT, NAME VARCHAR, BIRTHDAY VARCHAR)");                    //base table 1
         stat.execute("CREATE TABLE TABLE2(ID INT, LOCATION VARCHAR)");                    //base table 2
         
-        stat.execute("INSERT INTO TABLE1 VALUES(2, 'Thomas Bramble')");                      
+        stat.execute("INSERT INTO TABLE1 VALUES(2, 'Thomas Bramble', '10-11-1993')");                      
         stat.execute("INSERT INTO TABLE2 VALUES(4, 'San Diego')");
         stat.execute("INSERT INTO TABLE2  VALUES(2, 'Paso Robles')");
         stat.execute("INSERT INTO TABLE2 VALUES(2, 'San Luis Obispo')");
         
         
-        stat.execute("CREATE MATERIALIZED VIEW TEST(ID INT, LOCATION VARCHAR) AS SELECT ID, LOCATION FROM "
-        		+ "TABLE2 WHERE ID = '2'");    //all 4 commands assigned in parser
+        stat.execute("CREATE MATERIALIZED VIEW TEST(ID INT, NAME VARCHAR, LOCATION VARCHAR, BIRTHDAY VARCHAR) AS SELECT ID, NAME, LOCATION, BIRTHDAY FROM "
+        		+ "TABLE1, TABLE2 WHERE IDENTITY = ID");    //all 4 commands assigned in parser
         
         //stat.execute("UPDATE TABLE2 SET LOCATION = 'Arroyo Grande' WHERE ID = 4");
         
         
         
         
-        stat.execute("INSERT INTO TABLE1 VALUES(2, 'Wes Janson')");                     //trigger will fire on this line
+        stat.execute("INSERT INTO TABLE1 VALUES(2, 'Wes Janson', '1-11-1923')");                     //trigger will fire on this line
         
         stat.execute("INSERT INTO TABLE2 VALUES(2, 'Los Angeles')");
         
         ResultSet rs;                                                    
         rs = stat.executeQuery("SELECT * FROM TEST");           
         rs.next();
-        System.out.println("The first tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
+        System.out.println("The first tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2) + " and location " + 
+        rs.getString(3) + " and birthday " + rs.getString(4));
         rs.next();
         System.out.println("The second tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
         rs.next();
-        System.out.println("The third tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
+        System.out.println("The first tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
+        rs.next();
+        System.out.println("The second tuple of Test has id " + rs.getString(1) + " and name " + rs.getString(2));
+        rs.next();
+        System.out.println("The first tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
+        rs.next();
+        System.out.println("The second tuple of Test has name " + rs.getString(1) + " and location " + rs.getString(2));
         
+        
+        
+
         
         
         stat.close();
@@ -129,24 +139,24 @@ public class TriggerPassData implements Trigger {
         /*Set up sql statement that will select tuples containing all values of tuple inserted into base table */
         
         if (attribute2 == null) {
-        	k = 4;
+        	k = 1;
     		s = "SELECT " + attribute1; 
         }
     								
     	else if (attribute3 == null) {
-    		k = 3;
+    		k = 2;
     		s = "SELECT " + attribute1 + ",  " + attribute2;
     	}
     	else if (attribute4 == null) {
-    		k = 2;
+    		k = 3;
     		s = "SELECT " + attribute1 + ",  " + attribute2 + ", " + attribute3;
     	}
     	else if (attribute5 == null) {
-    		k = 1;
+    		k = 4;
     		s = "SELECT " + attribute1 + ",  " + attribute2 + ", " + attribute3 + ", " + attribute4;
     	}
     	else {
-    		
+    		k = 5;
     		s = "SELECT " + attribute1 + ",  " + attribute2 + ", " + attribute3 + ", " + attribute4 + ", " + attribute5;
     	}
     		
@@ -202,8 +212,8 @@ public class TriggerPassData implements Trigger {
         	
 	        /*Construct insertion statement*/
 	        s = "INSERT INTO " + mview + " VALUES(";
-	        q = k;
-	        while (q < 5) {
+	        q = 1;
+	        while (q < k) {
 	        	
 	        	if (rsmd.getColumnTypeName(q).contentEquals("INT"))
 	        		s = s + rs.getInt(q) + ", ";
@@ -225,10 +235,15 @@ public class TriggerPassData implements Trigger {
     }
 
     private void update(Connection conn, Object[] old, Object[] row) throws SQLException {
+    	
+    	
     	String s;
     	Statement stat;
     	PreparedStatement prep;
     	ResultSet rs;
+    	
+    	s = 
+    	prep = conn.prepareStatement(s);
     	
     	/* Select all of the columns from first table for metadata (we need value of join attribute for a query) */
     	s = "SELECT * FROM " + table1;                 
