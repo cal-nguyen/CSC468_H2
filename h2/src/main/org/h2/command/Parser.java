@@ -5865,9 +5865,13 @@ public class Parser {
                 if (!cached && !memory) {
                     cached = database.getDefaultTableType() == Table.TYPE_CACHED;
                 }
-        		//Temp, global temp, persistIndexes
-				//Call with same params of CREATE TABLE
-                
+               
+                /*
+                 * These variables are global, thus need to be cleared in case another run is performed.
+                 * Since creating a materialized view from a materialized view is not allowed, no need
+                 * to worry about clearing accidently during a recursive call.
+                 * The values are initialized during the parseCreateTable call below.
+                 */
                 materializeSelect.clear();
                 materializeFrom.clear();
                 materializeWhere.clear();
@@ -5875,6 +5879,8 @@ public class Parser {
                 
                 isMaterialize = true;
                 reachedWhere = false;
+                //Temp, global temp, persistIndexes
+				//Call with same params of CREATE TABLE
         		Prepared command1 =  parseCreateTable(false, false, cached);        //table is created and if query is added
         		isMaterialize = false;
         		reachedWhere = false;
@@ -5897,8 +5903,8 @@ public class Parser {
         		 */
         		
         		/*
-        		 * These for loops are to store only the first and second values if available, to limit how many
-        		 * cases are handled.
+        		 * These for loops are to store only the first and second values if available, to limit 
+        		 * how many cases are handled.
         		 */
         		if (materializeSelect.size() >= 1) {
         			attribute1 = "'" + materializeSelect.get(0) + "'";
@@ -5966,14 +5972,9 @@ public class Parser {
 	                	    +attribute2+", "+attribute3+", "+attribute4+", "+attribute5+", "+where2+", "+where1+")");
 	        	    return command6;
         	    }
-        	    else
+        	    else {
         	    	return command5;
-	        	    
-        	    
-        	    
-        	    /* By Thursday, we need to pass actual String variables, not hard-coded strings
-        	     * 
-        	     * Prepared command4 = session.prepare("CALL TRIGGER_SET('T1', " + mView + ", " + table1 + "," +  attribute1 ...    */
+        	    }
         	}
         }
         //*************************************************************
