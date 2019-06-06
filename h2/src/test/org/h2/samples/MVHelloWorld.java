@@ -34,19 +34,41 @@ public class MVHelloWorld {
         // from the SQL script file 'init.sql'
         // stat.execute("runscript from 'init.sql'");
         
-        stat.execute("create table test(id int primary key, name varchar(255))");
-        stat.execute("insert into test values(1, 'Hello')");
-        stat.execute("insert into test values(2, 'World')");
-        stat.execute("insert into test values(3, '!!!')");
-
-        stat.execute("create materialize view mvname as select * from test");
-
         ResultSet rs;
+        
+        stat.execute("CREATE TABLE test(id int primary key, name varchar(255))");
+        stat.execute("INSERT INTO test VALUES(1, 'Hello')");
+        stat.execute("INSERT INTO test VALUES(2, 'World')");
+        stat.execute("INSERT INTO test VALUES(3, '!!!')");
+
+        stat.execute("CREATE MATERIALIZED VIEW mvname AS SELECT id, name FROM test");
+        
+
+        rs = stat.executeQuery("select * from mvname");
+        System.out.println("\n\n\nOriginal Values from underlying table");
+        System.out.println("id\t\tname");
+        System.out.println("-----------------------");
+        while (rs.next()) {
+            System.out.print(rs.getString("id"));
+            System.out.println("\t\t" + rs.getString("name"));
+        }
+        
+        
+        stat.execute("INSERT INTO test VALUES(4, 'CSC')");
+        stat.execute("INSERT INTO test VALUES(5, '468')");
+        stat.execute("INSERT INTO test VALUES(6, 'DBMS')");
         rs = stat.executeQuery("select * from mvname");
 
+        System.out.println("\nValues after underlying table INSERT");
+        System.out.println("id\t\tname");
+        System.out.println("-----------------------");
         while (rs.next()) {
-            System.out.println(rs.getString("name"));
+            System.out.print(rs.getString("id"));
+            System.out.println("\t\t" + rs.getString("name"));
         }
+        
+
+        
         stat.close();
         conn.close();
     }
