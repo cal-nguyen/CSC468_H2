@@ -242,9 +242,7 @@ public class TriggerPassData implements Trigger {
     	PreparedStatement prep;
     	ResultSet rs;
     	
-    	s = 
-    	prep = conn.prepareStatement(s);
-    	
+
     	/* Select all of the columns from first table for metadata (we need value of join attribute for a query) */
     	s = "SELECT * FROM " + table1;                 
     	stat = conn.createStatement();
