@@ -30,6 +30,9 @@ public class TriggerPassData implements Trigger {
     
     private String attribute1;
     private String attribute2;
+    private String attribute3;
+    private String attribute4;
+    private String attribute5;
     
     private String where1;
     private String where2;
@@ -124,14 +127,29 @@ public class TriggerPassData implements Trigger {
         int k = 0;           //keeps track of whether 1 or 2 attributes is selected
         
         /*Set up sql statement that will select tuples containing all values of tuple inserted into base table */
+        
         if (attribute2 == null) {
-        	k++;
+        	k = 4;
     		s = "SELECT " + attribute1; 
         }
     								
-    	else {
+    	else if (attribute3 == null) {
+    		k = 3;
     		s = "SELECT " + attribute1 + ",  " + attribute2;
     	}
+    	else if (attribute4 == null) {
+    		k = 2;
+    		s = "SELECT " + attribute1 + ",  " + attribute2 + ", " + attribute3;
+    	}
+    	else if (attribute5 == null) {
+    		k = 1;
+    		s = "SELECT " + attribute1 + ",  " + attribute2 + ", " + attribute3 + ", " + attribute4;
+    	}
+    	else {
+    		
+    		s = "SELECT " + attribute1 + ",  " + attribute2 + ", " + attribute3 + ", " + attribute4 + ", " + attribute5;
+    	}
+    		
                          //if two tables are join with where condition
 		if (table2 != null) {
 			if (where1 != null)
@@ -176,7 +194,7 @@ public class TriggerPassData implements Trigger {
 				
 		}
 		 
-        k++;
+        
         int q;
         rs = stat.executeQuery(s);
         while (rs.next()) {
@@ -185,7 +203,7 @@ public class TriggerPassData implements Trigger {
 	        /*Construct insertion statement*/
 	        s = "INSERT INTO " + mview + " VALUES(";
 	        q = k;
-	        while (q < 2) {
+	        while (q < 5) {
 	        	
 	        	if (rsmd.getColumnTypeName(q).contentEquals("INT"))
 	        		s = s + rs.getInt(q) + ", ";
@@ -294,7 +312,8 @@ public class TriggerPassData implements Trigger {
     
     public static void setTriggerData(Connection conn, String trigger,
             String mview, String table1, String table2, String attribute1,
-            String attribute2, String where1, String where2) throws SQLException {
+            String attribute2, String attribute3, String attribute4, String attribute5,
+            String where1, String where2) throws SQLException {
     	/* Materialized view and base table strings are given to the trigger */
         TRIGGERS.get(getPrefix(conn) + trigger).table1 = table1;
         TRIGGERS.get(getPrefix(conn) + trigger).table2 = table2;
@@ -302,6 +321,12 @@ public class TriggerPassData implements Trigger {
         
         TRIGGERS.get(getPrefix(conn) + trigger).attribute1 = attribute1;
         TRIGGERS.get(getPrefix(conn) + trigger).attribute2 = attribute2;
+        TRIGGERS.get(getPrefix(conn) + trigger).attribute3 = attribute3;
+        TRIGGERS.get(getPrefix(conn) + trigger).attribute4 = attribute4;
+        TRIGGERS.get(getPrefix(conn) + trigger).attribute5 = attribute5;
+        		
+        
+        
         TRIGGERS.get(getPrefix(conn) + trigger).where1 = where1;
         TRIGGERS.get(getPrefix(conn) + trigger).where2 = where2;
         TRIGGERS.get(getPrefix(conn) + trigger).triggerType = "Insert";

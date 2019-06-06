@@ -5881,6 +5881,7 @@ public class Parser {
         		command1.update();
         		String mView = materializeName;
         		String attribute1 = null, attribute2 = null;        //selection attributes
+        		String attribute3 = null, attribute4 = null, attribute5 = null;
         		String table1 = null, table2 = null;
         		String where1 = null, where2 = null;                //where clause values
         		
@@ -5942,13 +5943,13 @@ public class Parser {
         	    
         		//where2 = "'2'";
         	    Prepared command5 = session.prepare("CALL TRIGGER_SET('T1', "+mView+", "+table1+", "+table2+", "+attribute1+", "
-        	    +attribute2+", "+where1+", "+where2+")");
+        	    +attribute2+", "+attribute3+", "+attribute4+", "+attribute5+", "+where1+", "+where2+")");
         	    
         	    if (table2 != null) {
 	        	    command5.update();
 	        	    
 	        	    Prepared command6 = session.prepare("CALL TRIGGER_SET('T2', "+mView+", "+table2+", "+table1+", "+attribute1+", "
-	                	    +attribute2+", "+where2+", "+where1+")");
+	                	    +attribute2+", "+attribute3+", "+attribute4+", "+attribute5+", "+where2+", "+where1+")");
 	        	    return command6;
         	    }
         	    else
