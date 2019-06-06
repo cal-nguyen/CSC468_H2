@@ -5907,13 +5907,13 @@ public class Parser {
         				attribute2 = "'" + materializeSelect.get(1) + "'";
         				
         				if (materializeSelect.size() >= 3) {
-            				attribute3 = "'" + materializeSelect.get(1) + "'";
+            				attribute3 = "'" + materializeSelect.get(2) + "'";
             				
             				if (materializeSelect.size() >= 4) {
-                				attribute4 = "'" + materializeSelect.get(1) + "'";
+                				attribute4 = "'" + materializeSelect.get(3) + "'";
                 				
                 				if (materializeSelect.size() >= 5) {
-                    				attribute5 = "'" + materializeSelect.get(1) + "'";
+                    				attribute5 = "'" + materializeSelect.get(4) + "'";
                     			}
                 			}
             			}
